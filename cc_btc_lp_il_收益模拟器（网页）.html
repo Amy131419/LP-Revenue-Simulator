@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CC/CBTC LP Simulator</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg:#0b1020; --card:#121a33; --muted:#95a0c6; --text:#eef1ff; --line:#263158;
+      --accent:#7aa2ff; --accent2:#ffa45b; --good:#3cc878; --bad:#f05a5a;
+    }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background:radial-gradient(1200px 700px at 20% 0%, rgba(122,162,255,.18), transparent 55%),
+                 radial-gradient(900px 600px at 90% 10%, rgba(255,164,91,.12), transparent 60%),
+                 linear-gradient(180deg,#070b18 0%, #0b1020 45%, #070b18 100%);
+      color:var(--text);
+    }
+    a{ color:inherit; }
+    .wrap{ max-width:1200px; margin:0 auto; padding:22px; }
+    .topbar{ display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:14px; }
+    .brand{ display:flex; align-items:center; gap:10px; }
+    .logo{ width:34px; height:34px; border-radius:12px; background:linear-gradient(135deg, rgba(122,162,255,.95), rgba(255,164,91,.85));
+      display:grid; place-items:center; box-shadow:0 10px 24px rgba(0,0,0,.35);
+    }
+    .logo svg{ width:18px; height:18px; }
+    .brand h1{ margin:0; font-size:16px; letter-spacing:.2px; }
+    .pill{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border-radius:999px;
+      background:rgba(10,15,34,.7); border:1px solid rgba(38,49,88,.9); color:var(--muted); font-size:12px;
+    }
+    .hero{ background:rgba(18,26,51,.85); border:1px solid rgba(38,49,88,.9); border-radius:22px; padding:18px 18px 14px;
+      box-shadow:0 10px 30px rgba(0,0,0,.35); margin-bottom:16px;
+    }
+    .hero .title{ font-size:22px; font-weight:850; margin:0 0 6px; }
+    .hero .sub{ margin:0 0 12px; color:var(--muted); line-height:1.5; }
+    .hero .bullets{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+    @media (max-width: 880px){ .hero .bullets{ grid-template-columns:1fr; } }
+    .bullet{ background:rgba(10,15,34,.65); border:1px solid rgba(38,49,88,.75); border-radius:16px; padding:10px 12px; }
+    .bullet .t{ font-size:12px; color:var(--muted); }
+    .bullet .v{ font-size:13px; font-weight:700; margin-top:4px; }
+
+    .grid{ display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+    @media (max-width: 980px){ .grid{ grid-template-columns:1fr; } }
+    .card{ background:rgba(18,26,51,.92); border:1px solid rgba(38,49,88,.9); border-radius:18px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.35); }
+    .row{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+    @media (max-width: 560px){ .row{ grid-template-columns:1fr; } }
+    label{ display:block; font-size:12px; color:var(--muted); margin:10px 0 6px; }
+    input{ width:100%; padding:10px 12px; border-radius:12px; border:1px solid rgba(38,49,88,.9); background:#0a0f22; color:var(--text); outline:none; }
+    input:focus{ border-color: rgba(122,162,255,.9); box-shadow:0 0 0 3px rgba(122,162,255,.15); }
+
+    .btns{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+    button{ padding:10px 14px; border-radius:14px; border:1px solid rgba(38,49,88,.9); background:rgba(122,162,255,.14); color:var(--text); cursor:pointer; font-weight:700; }
+    button:hover{ background:rgba(122,162,255,.22); }
+    .ghost{ background:rgba(10,15,34,.65); }
+
+    .kpi{ display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; margin-top:12px; }
+    @media (max-width: 980px){ .kpi{ grid-template-columns: repeat(2, 1fr); } }
+    .kpi .box{ background:#0a0f22; border:1px solid rgba(38,49,88,.9); border-radius:14px; padding:12px; }
+    .kpi .t{ font-size:12px; color:var(--muted); }
+    .kpi .v{ font-size:16px; font-weight:900; margin-top:6px; }
+    .kpi .s{ font-size:12px; color:var(--muted); margin-top:6px; }
+
+    .hr{ height:1px; background:rgba(38,49,88,.9); margin:14px 0; }
+    .small{ font-size:12px; color:var(--muted); line-height:1.5; }
+
+    .split{ display:grid; grid-template-columns: 1fr; gap:10px; }
+    .breakdown{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; margin-top:8px; }
+    @media (max-width: 980px){ .breakdown{ grid-template-columns:1fr; } }
+    .tag{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 12px;
+      background:rgba(10,15,34,.65); border:1px solid rgba(38,49,88,.8); border-radius:14px;
+    }
+    .tag .t{ color:var(--muted); font-size:12px; }
+    .tag .v{ font-weight:850; font-size:13px; }
+
+    .heat{ overflow:auto; border-radius:14px; border:1px solid rgba(38,49,88,.9); }
+    table{ border-collapse:collapse; width:100%; min-width:760px; background:#0a0f22; }
+    th,td{ padding:8px 10px; border-bottom:1px solid rgba(38,49,88,.65); border-right:1px solid rgba(38,49,88,.35); font-size:12px; text-align:right; white-space:nowrap; }
+    th{ position:sticky; top:0; background:#0d1330; z-index:2; color:var(--muted); }
+    th:first-child, td:first-child{ text-align:left; position:sticky; left:0; background:#0d1330; z-index:1; }
+
+    .legend{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px; }
+    .chip{ display:inline-flex; gap:8px; align-items:center; padding:6px 10px; border-radius:999px; background:#0a0f22; border:1px solid rgba(38,49,88,.9); color:var(--muted); font-size:12px; }
+    .sw{ width:10px; height:10px; border-radius:3px; display:inline-block; background:var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo" aria-label="Logo">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2l7.5 4.3v11.4L12 22 4.5 17.7V6.3L12 2z" stroke="rgba(15,18,30,.9)" stroke-width="1.6" fill="rgba(255,255,255,.15)"/>
+            <path d="M7.7 9.2h8.6M7.7 14.8h8.6" stroke="rgba(15,18,30,.9)" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div>
+          <h1>CC/CBTC LP Simulator</h1>
+          <div style="color:var(--muted); font-size:12px; margin-top:2px;">IL risk + fee/reward economics in one view</div>
+        </div>
+      </div>
+      <div class="pill">Constant-product AMM · x·y=k · 50/50 value deposit</div>
+    </div>
+
+    <div class="hero">
+      <div class="title">Model LP performance vs HODL — including fee APR, rewards APR, and traffic costs</div>
+      <p class="sub">Built for partner-facing discussions: quickly show how <b>price moves</b> + <b>LP economics</b> interact. This tool assumes an initial position of <b>1 CBTC</b> + <b>$100,000 worth of CC</b> at the initial prices.</p>
+      <div class="bullets">
+        <div class="bullet"><div class="t">What it answers</div><div class="v">“At what CC price range does LP outperform simply holding?”</div></div>
+        <div class="bullet"><div class="t">What it highlights</div><div class="v">Break-even zones under realistic APY components (fees + incentives − costs).</div></div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h2 style="margin:0 0 8px; font-size:16px;">Inputs</h2>
+
+        <div class="row">
+          <div>
+            <label>Initial CBTC price (USD)</label>
+            <input id="btc0" type="number" step="0.01" value="100000" />
+          </div>
+          <div>
+            <label>Initial CC price (USD)</label>
+            <input id="cc0" type="number" step="0.000001" value="0.07" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Current CBTC price (USD)</label>
+            <input id="btcNow" type="number" step="0.01" value="90259" />
+          </div>
+          <div>
+            <label>Current CC price (USD)</label>
+            <input id="ccNow" type="number" step="0.000001" value="0.07" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>CBTC range (±%)</label>
+            <input id="btcRange" type="number" step="0.1" value="30" />
+          </div>
+          <div>
+            <label>CC range (±%)</label>
+            <input id="ccRange" type="number" step="0.1" value="300" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Steps (curve points / heatmap buckets)</label>
+            <input id="steps" type="number" step="1" value="25" />
+          </div>
+          <div>
+            <label>Holding period (days)</label>
+            <input id="days" type="number" step="1" value="365" />
+          </div>
+        </div>
+
+        <div class="hr"></div>
+        <h3 style="margin:0 0 6px; font-size:14px;">APY components (default: CC/CBTC sample)</h3>
+
+        <div class="row">
+          <div>
+            <label>Swap fee APR (%)</label>
+            <input id="swapApr" type="number" step="0.1" value="18" />
+          </div>
+          <div>
+            <label>Rewards APR (%)</label>
+            <input id="rewardsApr" type="number" step="0.1" value="48" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Rewards multiplier (x)</label>
+            <input id="rewardsMult" type="number" step="0.1" value="1" />
+          </div>
+          <div>
+            <label>Traffic / network cost (USD per month)</label>
+            <input id="trafficCostMo" type="number" step="1" value="1000" />
+          </div>
+        </div>
+
+        <div class="breakdown">
+          <div class="tag"><div class="t">Total APY</div><div class="v" id="k_totalApy">—</div></div>
+          <div class="tag"><div class="t">Annual yield (USD)</div><div class="v" id="k_yieldAnnual">—</div></div>
+          <div class="tag"><div class="t">Annual cost (USD)</div><div class="v" id="k_costAnnual">—</div></div>
+        </div>
+
+        <div class="btns">
+          <button id="run">Recalculate</button>
+          <button id="reset" class="ghost">Reset to defaults</button>
+        </div>
+
+        <div class="hr"></div>
+        <div class="small">
+          <b>Assumptions</b>:
+          <ul style="margin:8px 0 0 18px; padding:0; color:var(--muted)">
+            <li>AMM is constant-product with instant arbitrage to external prices (Uniswap v2-style).</li>
+            <li>HODL baseline is <b>1 CBTC + the initial CC amount</b> (the CC amount is fixed from the initial deposit).</li>
+            <li>Total APY = swap fee APR + rewards APR × multiplier − (traffic cost APR).</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 style="margin:0 0 8px; font-size:16px;">Single-point result (current prices)</h2>
+        <div class="kpi">
+          <div class="box"><div class="t">HODL value</div><div class="v" id="k_hodl">-</div><div class="s">Baseline portfolio value</div></div>
+          <div class="box"><div class="t">LP value (no yield)</div><div class="v" id="k_lp">-</div><div class="s">AMM position value</div></div>
+          <div class="box"><div class="t">IL / LP−HODL</div><div class="v" id="k_diff">-</div><div class="s">Pure price-driven delta</div></div>
+          <div class="box"><div class="t">Net (APY − cost)</div><div class="v" id="k_net">-</div><div class="s">Delta after economics</div></div>
+        </div>
+
+        <div class="hr"></div>
+        <h2 style="margin:0 0 10px; font-size:16px;">Curve: fix CBTC, sweep CC</h2>
+        <canvas id="line" height="150"></canvas>
+        <div class="legend">
+          <span class="chip"><span class="sw"></span>Blue: LP − HODL (IL only)</span>
+          <span class="chip"><span class="sw" style="background:var(--accent2)"></span>Orange: LP − HODL (APY − cost)</span>
+        </div>
+      </div>
+
+      <div class="card" style="grid-column:1 / -1;">
+        <h2 style="margin:0 0 10px; font-size:16px;">Heat table: sweep both CBTC & CC (net vs HODL)</h2>
+        <div class="small">Each cell shows: <b>USD net delta</b> = (LP value + yield − cost) − HODL value. Green means LP wins, red means HODL wins.</div>
+        <div class="heat" style="margin-top:12px;">
+          <table id="heatTable"></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  function fmtUSD(x){
+    const s = (Math.abs(x) >= 1e9) ? x.toExponential(2) : x.toLocaleString(undefined,{maximumFractionDigits:2});
+    return "$" + s;
+  }
+  function fmtPct(x){ return (x*100).toFixed(2) + "%"; }
+
+  // Constant-product AMM (x*y=k), initial position: 1 CBTC + $100k CC at initial price.
+  function computePoint(params, PB, PC){
+    const {btc0, cc0, x0, y0, k, totalApyPct, days, trafficCostMo} = params;
+
+    // Relative move of CC vs CBTC in CBTC terms:
+    // initial (CC/CBTC) = cc0/btc0 ; current (CC/CBTC) = PC/PB
+    const r = (PC / PB) / (cc0 / btc0);
+
+    const p0 = x0 / y0;      // CBTC per CC in pool at t0
+    const p1 = p0 * r;       // new pool price in CBTC terms after arbitrage
+
+    const x1 = Math.sqrt(k * p1);
+    const y1 = Math.sqrt(k / p1);
+
+    const hodl = x0 * PB + y0 * PC;
+    const lp   = x1 * PB + y1 * PC;
+
+    const diff = lp - hodl;       // LP - HODL (USD)
+    const ilPct = lp / hodl - 1;  // %
+
+    const years = Math.max(0, days) / 365;
+    const initialCapitalUSD = (x0*btc0 + y0*cc0);
+
+    // Pro-rate yield by holding period using total APY (computed from components)
+    const yieldUSD = (totalApyPct/100) * initialCapitalUSD * years;
+
+    // Traffic cost is already included in totalApyPct, but we still expose explicit USD cost for transparency
+    const costUSD = (trafficCostMo || 0) * (Math.max(0, days) / 30);
+
+    const net = diff + yieldUSD; // totalApyPct already accounts for costs in APR terms
+
+    return {x1, y1, hodl, lp, diff, ilPct, yieldUSD, costUSD, net, initialCapitalUSD};
+  }
+
+  function buildParams(){
+    const btc0 = +document.getElementById('btc0').value;
+    const cc0  = +document.getElementById('cc0').value;
+    const x0   = 1.0;
+    const y0   = 100000 / cc0; // $100k CC at initial CC price
+    const k    = x0 * y0;
+
+    const days = +document.getElementById('days').value;
+
+    const swapApr = +document.getElementById('swapApr').value;
+    const rewardsApr = +document.getElementById('rewardsApr').value;
+    const rewardsMult = +document.getElementById('rewardsMult').value;
+    const trafficCostMo = +document.getElementById('trafficCostMo').value;
+
+    const initialCapitalUSD = (x0*btc0 + y0*cc0);
+    const trafficCostApr = (trafficCostMo * 12) / Math.max(1e-12, initialCapitalUSD) * 100;
+
+    const totalApyPct = swapApr + rewardsApr * rewardsMult - trafficCostApr;
+
+    return {btc0, cc0, x0, y0, k, totalApyPct, days, trafficCostMo, initialCapitalUSD, swapApr, rewardsApr, rewardsMult, trafficCostApr};
+  }
+
+  let lineChart;
+
+  function refresh(){
+    const params = buildParams();
+
+    // Update APY breakdown UI
+    document.getElementById('k_totalApy').textContent = `${params.totalApyPct.toFixed(2)}%`;
+    document.getElementById('k_yieldAnnual').textContent = fmtUSD((params.totalApyPct/100) * params.initialCapitalUSD);
+    document.getElementById('k_costAnnual').textContent = fmtUSD((+document.getElementById('trafficCostMo').value) * 12);
+
+    const btcNow = +document.getElementById('btcNow').value;
+    const ccNow  = +document.getElementById('ccNow').value;
+    const btcRange = +document.getElementById('btcRange').value / 100;
+    const ccRange  = +document.getElementById('ccRange').value / 100;
+    const steps = Math.max(5, Math.min(60, Math.floor(+document.getElementById('steps').value || 25)));
+
+    // KPIs (single point)
+    const pt = computePoint(params, btcNow, ccNow);
+    document.getElementById('k_hodl').textContent = fmtUSD(pt.hodl);
+    document.getElementById('k_lp').textContent   = fmtUSD(pt.lp);
+    document.getElementById('k_diff').textContent = `${fmtUSD(pt.diff)} (${fmtPct(pt.ilPct)})`;
+    document.getElementById('k_net').textContent  = `${fmtUSD(pt.net)}  (Yield ${fmtUSD(pt.yieldUSD)} · ${params.totalApyPct.toFixed(2)}% APY)`;
+
+    // Line chart: fix CBTC=btcNow, sweep CC
+    const ccMin = Math.max(1e-12, ccNow * (1 - ccRange));
+    const ccMax = Math.max(ccMin*1.001, ccNow * (1 + ccRange));
+
+    const labels = [];
+    const diffSeries = [];
+    const netSeries = [];
+
+    for(let i=0;i<steps;i++){
+      const t = i/(steps-1);
+      const PC = ccMin + (ccMax - ccMin) * t;
+      const res = computePoint(params, btcNow, PC);
+      labels.push(PC);
+      diffSeries.push(res.diff);
+      netSeries.push(res.net);
+    }
+
+    const ctx = document.getElementById('line');
+    if(lineChart) lineChart.destroy();
+    lineChart = new Chart(ctx, {
+      type:'line',
+      data:{
+        labels: labels,
+        datasets:[
+          { label:'LP - HODL (IL only)', data: diffSeries, borderWidth:2, pointRadius:0, tension:0.25 },
+          { label:'LP - HODL (APY - cost)', data: netSeries,  borderWidth:2, pointRadius:0, tension:0.25 }
+        ]
+      },
+      options:{
+        responsive:true,
+        plugins:{
+          tooltip:{
+            callbacks:{
+              title:(items)=> `CC = $${(+items[0].label).toFixed(6)}`,
+              label:(item)=> `${item.dataset.label}: ${fmtUSD(item.raw)}`
+            }
+          },
+          legend:{ labels:{ color:'#95a0c6' } }
+        },
+        scales:{
+          x:{
+            ticks:{ color:'#95a0c6', callback:(v, idx)=> idx%Math.ceil(steps/6)===0 ? "$"+labels[idx].toFixed(3) : "" },
+            grid:{ color:'rgba(38,49,88,.35)' }
+          },
+          y:{
+            ticks:{ color:'#95a0c6', callback:(v)=> (v>=0?"":"-")+"$"+Math.abs(v).toLocaleString(undefined,{maximumFractionDigits:0}) },
+            grid:{ color:'rgba(38,49,88,.35)' }
+          }
+        }
+      }
+    });
+    lineChart.data.datasets[0].borderColor = 'rgba(122,162,255,.95)';
+    lineChart.data.datasets[1].borderColor = 'rgba(255,164,91,.95)';
+    lineChart.update();
+
+    // Heat table: sweep CBTC & CC
+    const PBmin = Math.max(1e-12, btcNow * (1 - btcRange));
+    const PBmax = Math.max(PBmin*1.001, btcNow * (1 + btcRange));
+
+    const PCmin = Math.max(1e-12, ccNow * (1 - ccRange));
+    const PCmax = Math.max(PCmin*1.001, ccNow * (1 + ccRange));
+
+    const n = Math.max(8, Math.min(26, steps));
+    const PBs = Array.from({length:n}, (_,i)=> PBmin + (PBmax-PBmin)*i/(n-1));
+    const PCs = Array.from({length:n}, (_,i)=> PCmin + (PCmax-PCmin)*i/(n-1));
+
+    const tbl = document.getElementById('heatTable');
+    let html = '<thead><tr><th>CBTC \ CC</th>';
+    for(const PC of PCs){ html += `<th>$${PC.toFixed(4)}</th>`; }
+    html += '</tr></thead><tbody>';
+
+    function bgColor(v){
+      const cap = 200000; // visual cap
+      const t = Math.max(-1, Math.min(1, v / cap));
+      const a = Math.round(16 + 44*Math.abs(t));
+      if(t >= 0) return `rgba(60, 200, 120, ${a/100})`;
+      return `rgba(240, 90, 90, ${a/100})`;
+    }
+
+    for(const PB of PBs){
+      html += `<tr><td>$${PB.toFixed(0)}</td>`;
+      for(const PC of PCs){
+        const res = computePoint(params, PB, PC);
+        const v = res.net;
+        html += `<td style="background:${bgColor(v)}">${(v>=0?"":"-")}$${Math.abs(v).toLocaleString(undefined,{maximumFractionDigits:0})}</td>`;
+      }
+      html += '</tr>';
+    }
+    html += '</tbody>';
+    tbl.innerHTML = html;
+  }
+
+  document.getElementById('run').addEventListener('click', refresh);
+  document.getElementById('reset').addEventListener('click', ()=>{
+    // Prices
+    document.getElementById('btc0').value = 100000;
+    document.getElementById('cc0').value = 0.07;
+    document.getElementById('btcNow').value = 90259;
+    document.getElementById('ccNow').value = 0.07;
+
+    // Ranges
+    document.getElementById('btcRange').value = 30;
+    document.getElementById('ccRange').value = 300;
+    document.getElementById('steps').value = 25;
+    document.getElementById('days').value = 365;
+
+    // APY components (sample: swap 18% + rewards 48% (1x) − $1,000/mo)
+    document.getElementById('swapApr').value = 18;
+    document.getElementById('rewardsApr').value = 48;
+    document.getElementById('rewardsMult').value = 1;
+    document.getElementById('trafficCostMo').value = 1000;
+
+    refresh();
+  });
+
+  refresh();
+</script>
+</body>
+</html>
